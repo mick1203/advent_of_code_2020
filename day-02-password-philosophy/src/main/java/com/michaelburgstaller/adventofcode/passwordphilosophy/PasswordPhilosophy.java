@@ -8,23 +8,23 @@ import java.util.List;
 public class PasswordPhilosophy extends Exercise {
 
     private static class PasswordPolicy {
-        public Integer minimum;
-        public Integer maximum;
+        public Integer lhs;
+        public Integer rhs;
         public String character;
 
-        public PasswordPolicy(Integer minimum, Integer maximum, String character) {
-            this.minimum = minimum;
-            this.maximum = maximum;
+        public PasswordPolicy(Integer lhs, Integer rhs, String character) {
+            this.lhs = lhs;
+            this.rhs = rhs;
             this.character = character;
         }
 
         public static PasswordPolicy parse(String rawValue) {
             var policyTokens = rawValue.split(" ");
             var rangeTokens = policyTokens[0].split("-");
-            var minimum = Integer.parseInt(rangeTokens[0]);
-            var maximum = Integer.parseInt(rangeTokens[1]);
+            var lhs = Integer.parseInt(rangeTokens[0]);
+            var rhs = Integer.parseInt(rangeTokens[1]);
             var character = policyTokens[1];
-            return new PasswordPolicy(minimum, maximum, character);
+            return new PasswordPolicy(lhs, rhs, character);
         }
     }
 
@@ -45,23 +45,34 @@ public class PasswordPhilosophy extends Exercise {
         }
     }
 
-    private static boolean passwordEntryIsValid(PasswordEntry passwordEntry) {
+    private static boolean passwordCharacterOccurrencesAreValid(PasswordEntry passwordEntry) {
         var policy = passwordEntry.policy;
         var password = passwordEntry.password.split("");
         var occurrences = Arrays.stream(password).filter(character -> character.compareTo(policy.character) == 0).count();
-        return occurrences >= policy.minimum && occurrences <= policy.maximum;
+        return occurrences >= policy.lhs && occurrences <= policy.rhs;
     }
 
-    private static void findValidPasswords(List<PasswordEntry> passwordEntries) {
-        var validPasswordEntries = passwordEntries.stream().filter(PasswordPhilosophy::passwordEntryIsValid);
+    private static boolean passwordCharacterOccurAtExactlyOneValidLocation(PasswordEntry passwordEntry) {
+        var policy = passwordEntry.policy;
+        var password = passwordEntry.password.split("");
+        return password[policy.lhs - 1].equalsIgnoreCase(policy.character) ^ password[policy.rhs - 1].equalsIgnoreCase(policy.character);
+    }
+
+    private static void findPasswordEntriesWithValidAmountOfCharacters(List<PasswordEntry> passwordEntries) {
+        var validPasswordEntries = passwordEntries.stream().filter(PasswordPhilosophy::passwordCharacterOccurrencesAreValid);
+        System.out.println("There were '" + validPasswordEntries.count() + "' valid password from a total of '" + passwordEntries.size() + "'");
+    }
+
+    private static void findPasswordEntriesWithCorrectCharacterPositions(List<PasswordEntry> passwordEntries) {
+        var validPasswordEntries = passwordEntries.stream().filter(PasswordPhilosophy::passwordCharacterOccurAtExactlyOneValidLocation);
         System.out.println("There were '" + validPasswordEntries.count() + "' valid password from a total of '" + passwordEntries.size() + "'");
     }
 
     public static void main(String[] args) {
         var passwordEntries = getLineStream().map(PasswordEntry::parse).toList();
 
-        findValidPasswords(passwordEntries);
-
+        findPasswordEntriesWithValidAmountOfCharacters(passwordEntries);
+        findPasswordEntriesWithCorrectCharacterPositions(passwordEntries);
     }
 
 }
