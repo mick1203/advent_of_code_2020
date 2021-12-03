@@ -2,10 +2,99 @@ package com.michaelburgstaller.adventofcode.passportprocessing;
 
 import com.michaelburgstaller.adventofcode.Exercise;
 
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 public class PassportProcessing extends Exercise {
 
-    public static void main(String[] args) {
+    private static Stream<String> bufferPassports(Stream<String> passportDataStream) {
+        var passportData = passportDataStream.toList();
+        var passports = new ArrayList<String>();
+        var passport = new StringBuilder();
 
+        for (var line : passportData) {
+            if (line.isBlank()) {
+                passports.add(passport.toString());
+                passport.setLength(0);
+                continue;
+            }
+            passport.append(" " + line);
+        }
+        passports.add(passport.toString());
+
+        return passports.stream().map(p -> p.strip());
+    }
+
+    private enum PassportFieldType {
+        BIRTH_YEAR, ISSUE_YEAR, EXPIRATION_YEAR, HEIGHT, HAIR_COLOR, EYE_COLOR, PASSPORT_ID, COUNTRY_ID;
+
+        public static PassportFieldType parse(String rawValue) {
+            return switch (rawValue) {
+                case "byr" -> BIRTH_YEAR;
+                case "iyr" -> ISSUE_YEAR;
+                case "eyr" -> EXPIRATION_YEAR;
+                case "hgt" -> HEIGHT;
+                case "hcl" -> HAIR_COLOR;
+                case "ecl" -> EYE_COLOR;
+                case "pid" -> PASSPORT_ID;
+                case "cid" -> COUNTRY_ID;
+                default -> throw new IllegalArgumentException("'" + rawValue + "' is not a valid passport field type!");
+            };
+        }
+    }
+
+    private static class PassportField {
+        public PassportFieldType fieldType;
+        public String value;
+
+        public PassportField(PassportFieldType fieldType, String value) {
+            this.fieldType = fieldType;
+            this.value = value;
+        }
+
+        private static PassportField parse(String rawValue) {
+            var passportFieldTokens = rawValue.split(":");
+            var fieldType = PassportFieldType.parse(passportFieldTokens[0]);
+            var value = passportFieldTokens[1];
+            return new PassportField(fieldType, value);
+        }
+    }
+
+    private static class Passport {
+        public List<PassportField> fields;
+
+        public Passport(List<PassportField> fields) {
+            this.fields = fields;
+        }
+
+        public static Passport parse(String rawValue) {
+            var passportTokens = rawValue.split(" ");
+            var fields = Arrays.stream(passportTokens).map(PassportField::parse).toList();
+            return new Passport(fields);
+        }
+    }
+
+    private static boolean passportHasRequiredFields(Passport passport, Set<PassportFieldType> requiredFieldTypes) {
+        var passportFieldTypes = passport.fields.stream().map(field -> field.fieldType).collect(Collectors.toSet());
+        var missingFieldTypes = new HashSet<>(requiredFieldTypes);
+        missingFieldTypes.removeAll(passportFieldTypes);
+        return missingFieldTypes.isEmpty();
+    }
+
+    private static void checkForValidPassports(List<Passport> passports) {
+        var allPassportFields = new HashSet<>(List.of(PassportFieldType.values()));
+        var requiredPassportFields = new HashSet<>(allPassportFields);
+        requiredPassportFields.remove(PassportFieldType.COUNTRY_ID);
+        var validPassports = passports.stream().filter(passport -> passportHasRequiredFields(passport, requiredPassportFields)).collect(Collectors.toList());
+
+        System.out.println("There were a total of '" + validPassports.size() + "' valid passports in the input data!");
+    }
+
+    public static void main(String[] args) {
+        var passports = bufferPassports(getLineStream()).map(Passport::parse).toList();
+
+        checkForValidPassports(passports);
     }
 
 }
